@@ -277,6 +277,53 @@ button.letter:disabled { cursor: default; }
 
 .session-line { text-align: center; color: var(--muted); font-size: 0.9rem; }
 
+/* Sound list（比較） */
+.sound-list { margin-top: 16px; }
+.sound-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sound-title { font-weight: 600; }
+.btn.small { padding: 4px 12px; font-size: 0.85rem; border-radius: 8px; }
+.sound-items { display: flex; flex-direction: column; gap: 6px; }
+.sound-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+.sound-item:hover { border-color: var(--accent); }
+.sound-item::before { content: "▶"; font-size: 0.7rem; color: var(--muted); }
+.sound-item.mark { border-color: var(--ok); }
+.sound-item.playing { background: var(--accent-soft); border-color: var(--accent); }
+.sound-word { font-family: var(--display); font-size: 1.3rem; }
+.sound-sub { font-size: 0.85rem; color: var(--muted); }
+.sound-item.mark .sound-sub { color: var(--ok); }
+.compact .sound-items { flex-direction: row; flex-wrap: wrap; }
+.compact .sound-item { width: auto; }
+.compact .sound-word { font-size: 1.1rem; }
+.lookup { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--muted); margin-top: 12px; }
+.lookup input {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  max-width: 320px;
+}
+.section-title { margin: 24px 0 12px; }
+.group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 16px; }
+.group-card .sound-list { margin-top: 0; }
+.group-card .sound-title { font-family: var(--display); font-size: 1.2rem; }
+
 /* Stats */
 .stat-table, .rule-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 .stat-table th, .stat-table td, .rule-table th, .rule-table td {
@@ -316,6 +363,8 @@ kbd {
 
 @media (max-width: 520px) {
   .brand small { display: none; }
+  .tabs a { padding: 6px 9px; }
+  .group-grid { grid-template-columns: 1fr; }
   .quiz, .panel { padding: 16px; }
   .rule-table:not(.diacritic) { font-size: 0.85rem; }
 }

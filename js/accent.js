@@ -133,6 +133,47 @@
     return { type: a.type, typeName: info.name, typeZh: info.zh, hiato: a.hiato, needsTilde: a.expectTilde, lines };
   }
 
+  const ACCENT = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
+
+  // 音節的主要母音：有強母音取強母音，否則取最後一個母音；que/qui/gue/gui 的 u 不發音
+  function nucleusIndex(syl) {
+    const idx = [];
+    for (let i = 0; i < syl.length; i++) {
+      if (!VOWELS.includes(syl[i])) continue;
+      if (syl[i] === 'u' && /[qg]/.test(syl[i - 1] || '') && /[ei]/.test(syl[i + 1] || '')) continue;
+      idx.push(i);
+    }
+    return idx.find((i) => STRONG.includes(syl[i])) ?? idx[idx.length - 1];
+  }
+
+  // 把重音分別放在每個音節的唸法（真正的字標 real: true）。
+  // 單音節字，或母音相連牽涉弱母音（移動重音會改變音節數）時回傳 null。
+  function stressVariants(e) {
+    const n = e.syllables.length;
+    if (n < 2) return null;
+    const plainSyl = e.syllables.map(strip);
+    for (let i = 0; i + 1 < n; i++) {
+      const a = plainSyl[i].slice(-1);
+      const b = plainSyl[i + 1].replace(/^h/, '')[0];
+      if (VOWELS.includes(a) && VOWELS.includes(b) && (WEAK.includes(a) || WEAK.includes(b))) return null;
+    }
+    return plainSyl.map((syl, k) => {
+      if (k === e.stressIndex) return { k, word: e.word, syllables: e.syllables, real: true };
+      const nuc = nucleusIndex(syl);
+      const syls = plainSyl.slice();
+      syls[k] = syl.slice(0, nuc) + ACCENT[syl[nuc]] + syl.slice(nuc + 1);
+      return { k, word: syls.join(''), syllables: syls, real: false };
+    });
+  }
+
+  // 解析「比較」字組：每組用空行分開
+  function parseGroups(text) {
+    return text
+      .split(/\n\s*\n/)
+      .map((block) => block.split('\n').map((s) => s.trim()).filter(Boolean).map((line) => parseEntry(line, 'pair')))
+      .filter((g) => g.length);
+  }
+
   // 回傳錯誤訊息陣列，空陣列代表此字標註與規則一致
   function validate(e) {
     const errs = [];
@@ -152,7 +193,7 @@
     return errs;
   }
 
-  const Accent = { strip, parseEntry, analyze, explain, validate, VOWELS };
+  const Accent = { strip, parseEntry, analyze, explain, validate, stressVariants, parseGroups, VOWELS };
   if (typeof module !== 'undefined' && module.exports) module.exports = Accent;
   else root.Accent = Accent;
 })(typeof window !== 'undefined' ? window : globalThis);

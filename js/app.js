@@ -102,25 +102,38 @@
   };
 
   // ---------- 語音 ----------
+  // macOS 的趣味語音（Eddy、Grandma、Rocko…）品質差，排到最後
+  const NOVELTY_VOICE = /^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/;
+  const GOOD_VOICE = /M[óo]nica|Paulina|Jorge|Marisol|Juan|Diego|Elvira|[ÁA]lvaro|Dalia|Helena|Laura|Pablo|Sabina|Google/i;
+
+  function isNovelty(v) {
+    return NOVELTY_VOICE.test(v.name);
+  }
+
+  function voiceScore(v) {
+    let s = 0;
+    if (isNovelty(v)) s -= 100;
+    if (/premium|enhanced|mejorada|natural|neural/i.test(v.name)) s += 30;
+    if (GOOD_VOICE.test(v.name)) s += 20;
+    if (/es[-_]ES/i.test(v.lang)) s += 5;
+    else if (/es[-_](MX|US)/i.test(v.lang)) s += 3;
+    return s;
+  }
+
   const Speech = {
     supported: 'speechSynthesis' in window,
     voices: [],
     voice: null,
-    rate: store.get('acento.rate', 0.85),
+    rate: store.get('acento.rate', 1),
     init(onChange) {
       if (!this.supported) return onChange();
       const load = () => {
         const all = speechSynthesis.getVoices();
         this.voices = all
           .filter((v) => /^es([-_]|$)/i.test(v.lang))
-          .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+          .sort((a, b) => voiceScore(b) - voiceScore(a) || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
         const saved = store.get('acento.voice', null);
-        this.voice =
-          this.voices.find((v) => v.voiceURI === saved) ||
-          this.voices.find((v) => /es[-_]ES/i.test(v.lang) && v.localService) ||
-          this.voices.find((v) => /es[-_]ES/i.test(v.lang)) ||
-          this.voices[0] ||
-          null;
+        this.voice = this.voices.find((v) => v.voiceURI === saved) || this.voices[0] || null;
         onChange();
       };
       load();
@@ -134,14 +147,49 @@
       this.rate = r;
       store.set('acento.rate', r);
     },
-    speak(text, slow) {
-      if (!this.supported) return;
+    seq: 0,
+    onStop: null,
+    // 打斷正在播放的字或序列
+    interrupt() {
+      this.seq++;
+      const stop = this.onStop;
+      this.onStop = null;
+      stop?.();
       speechSynthesis.cancel();
+    },
+    utter(text, slow) {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = this.voice ? this.voice.lang : 'es-ES';
       if (this.voice) u.voice = this.voice;
-      u.rate = slow ? Math.max(0.4, this.rate * 0.6) : this.rate;
-      speechSynthesis.speak(u);
+      u.rate = slow ? Math.max(0.5, this.rate * 0.7) : this.rate;
+      return u;
+    },
+    speak(text, slow) {
+      if (!this.supported) return;
+      this.interrupt();
+      speechSynthesis.speak(this.utter(text, slow));
+    },
+    // 依序唸出多個字，中間停頓；onItem(i) 在每個字開始時呼叫，i = -1 代表結束或被打斷
+    speakSeq(texts, onItem, gap = 600) {
+      if (!this.supported) return;
+      this.interrupt();
+      const token = this.seq;
+      const stop = () => onItem(-1);
+      this.onStop = stop;
+      const step = (i) => {
+        if (token !== this.seq) return;
+        if (i >= texts.length) {
+          this.onStop = null;
+          return stop();
+        }
+        onItem(i);
+        const u = this.utter(texts[i], false);
+        u.onend = () => setTimeout(() => step(i + 1), gap);
+        u.onerror = u.onend;
+        this.current = u; // 保留參照，避免 Chrome 回收後不觸發 onend
+        speechSynthesis.speak(u);
+      };
+      step(0);
     },
   };
 
@@ -159,12 +207,22 @@
     sel.addEventListener('change', () => Speech.setVoice(sel.value));
     Speech.init(() => {
       sel.innerHTML = '';
-      for (const v of Speech.voices) {
-        const o = document.createElement('option');
-        o.value = v.voiceURI;
-        o.textContent = `${v.name}（${v.lang}）`;
-        o.selected = v === Speech.voice;
-        sel.appendChild(o);
+      const groups = [
+        ['推薦', Speech.voices.filter((v) => !isNovelty(v))],
+        ['趣味語音（不建議）', Speech.voices.filter(isNovelty)],
+      ];
+      for (const [label, voices] of groups) {
+        if (!voices.length) continue;
+        const g = document.createElement('optgroup');
+        g.label = label;
+        for (const v of voices) {
+          const o = document.createElement('option');
+          o.value = v.voiceURI;
+          o.textContent = `${v.name}（${v.lang}）`;
+          o.selected = v === Speech.voice;
+          g.appendChild(o);
+        }
+        sel.appendChild(g);
       }
       sel.disabled = !Speech.voices.length;
       if (!Speech.supported) {
@@ -188,6 +246,40 @@
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
+  }
+
+  // 音節顯示：tér · mi · no，重音音節加粗
+  function sylNode(syllables, k) {
+    const n = el('span', 'syllables');
+    syllables.forEach((s, i) => {
+      if (i) n.appendChild(document.createTextNode(' · '));
+      n.appendChild(i === k ? el('b', null, s) : document.createTextNode(s));
+    });
+    return n;
+  }
+
+  // 可逐一點播、也可依序播放的字列表
+  function soundList(items, { title = '', compact = false } = {}) {
+    const wrap = el('div', `sound-list${compact ? ' compact' : ''}`);
+    const head = el('div', 'sound-head');
+    head.appendChild(el('span', 'sound-title', title));
+    const all = el('button', 'btn small', '▶ 依序播放');
+    head.appendChild(all);
+    wrap.appendChild(head);
+    const body = el('div', 'sound-items');
+    const rows = items.map((it) => {
+      const b = el('button', `sound-item${it.mark ? ' mark' : ''}`);
+      b.appendChild(el('span', 'sound-word', it.word));
+      b.appendChild(sylNode(it.syllables, it.k));
+      if (it.sub) b.appendChild(el('span', 'sound-sub', it.sub));
+      b.addEventListener('click', () => Speech.speak(it.word));
+      body.appendChild(b);
+      return b;
+    });
+    wrap.appendChild(body);
+    const highlight = (i) => rows.forEach((r, j) => r.classList.toggle('playing', j === i));
+    all.addEventListener('click', () => Speech.speakSeq(items.map((it) => it.word), highlight));
+    return wrap;
   }
 
   function withAccent(plain, idx) {
@@ -292,12 +384,7 @@
       fbEl.appendChild(el('div', `verdict ${ok ? 'ok' : 'bad'}`, ok ? '答對了！' : '不對喔'));
       const line = el('div', 'answer-line');
       line.appendChild(el('span', 'answer-word', cur.word));
-      const syl = el('span', 'syllables');
-      cur.syllables.forEach((s, i) => {
-        if (i) syl.appendChild(document.createTextNode(' · '));
-        syl.appendChild(i === cur.stressIndex ? el('b', null, s) : document.createTextNode(s));
-      });
-      line.appendChild(syl);
+      line.appendChild(sylNode(cur.syllables, cur.stressIndex));
       if (!ok) line.appendChild(el('span', 'yours', `你的答案：${idx < 0 ? `${cur.plain}（不標）` : withAccent(cur.plain, idx)}`));
       fbEl.appendChild(line);
       const tags = el('div', 'tags');
@@ -310,6 +397,15 @@
       for (const l of info.lines) ul.appendChild(el('li', null, l));
       fbEl.appendChild(ul);
       if (cur.note) fbEl.appendChild(el('div', 'note', `備註：${cur.note}`));
+      const variants = Accent.stressVariants(cur);
+      if (variants) {
+        fbEl.appendChild(
+          soundList(
+            variants.map((v) => ({ word: v.word, syllables: v.syllables, k: v.k, mark: v.real, sub: v.real ? '✓ 正確' : '' })),
+            { title: '換個重音聽聽看（只有 ✓ 是真正的字）', compact: true }
+          )
+        );
+      }
     }
 
     function handleKey(e) {
@@ -579,8 +675,69 @@
     }
   });
 
+  // ---------- 比較 ----------
+  const Compare = (() => {
+    const groups = Accent.parseGroups(window.Pairs.PAIRS);
+    const input = document.getElementById('lookup');
+    const result = document.getElementById('lookup-result');
+    const list = document.getElementById('lookup-list');
+    let rendered = false;
+
+    // 只開放練習用的字，測驗保留字不在這裡曝光
+    for (const e of PRACTICE) {
+      const o = document.createElement('option');
+      o.value = e.word;
+      list.appendChild(o);
+    }
+
+    function lookup() {
+      const q = input.value.trim().toLowerCase();
+      result.innerHTML = '';
+      if (!q) return;
+      const e = PRACTICE.find((x) => x.word === q) || PRACTICE.find((x) => x.plain === Accent.strip(q));
+      if (!e) {
+        result.appendChild(el('p', 'muted', '練習題庫裡沒有這個字（測驗保留的字不開放查詢）。'));
+        return;
+      }
+      const variants = Accent.stressVariants(e);
+      if (!variants) {
+        result.appendChild(el('p', 'muted', `${e.word}：單音節字或母音相連（移動重音會改變音節數），不提供比較。`));
+        return;
+      }
+      result.appendChild(
+        soundList(
+          variants.map((v) => ({ word: v.word, syllables: v.syllables, k: v.k, mark: v.real, sub: v.real ? '✓ 真正的字' : '' })),
+          { title: `${e.word} 的重音放在每個音節` }
+        )
+      );
+    }
+
+    function render() {
+      const box = document.getElementById('compare-groups');
+      for (const g of groups) {
+        const card = el('div', 'panel group-card');
+        card.appendChild(
+          soundList(
+            g.map((e) => ({ word: e.word, syllables: e.syllables, k: e.stressIndex, sub: `${Accent.explain(e).typeName} · ${e.note}` })),
+            { title: g[0].plain }
+          )
+        );
+        box.appendChild(card);
+      }
+    }
+
+    input.addEventListener('input', lookup);
+    return {
+      enter() {
+        if (rendered) return;
+        rendered = true;
+        render();
+      },
+    };
+  })();
+
   // ---------- 路由 ----------
-  const VIEWS = ['practice', 'test', 'stats', 'rules'];
+  const VIEWS = ['practice', 'test', 'compare', 'stats', 'rules'];
   let current = null;
 
   function route() {
@@ -588,8 +745,9 @@
     current = name;
     for (const v of VIEWS) document.getElementById(`view-${v}`).hidden = v !== name;
     for (const a of document.querySelectorAll('.tabs a')) a.classList.toggle('active', a.dataset.view === name);
-    document.getElementById('voicebar').hidden = !(name === 'practice' || name === 'test');
+    document.getElementById('voicebar').hidden = !['practice', 'test', 'compare'].includes(name);
     if (name === 'practice') Practice.enter();
+    if (name === 'compare') Compare.enter();
     if (name === 'stats') renderStats();
   }
 

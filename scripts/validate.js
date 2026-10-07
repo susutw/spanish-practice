@@ -23,5 +23,22 @@ for (const { key } of CATEGORIES) {
   }
   console.log(`${key.padEnd(10)} ${String(lines.length).padStart(3)} 字（要標 ${tilde}、不用標 ${lines.length - tilde}）`);
 }
+// 「比較」字組：標註要符合規則，同組拼法相同，且每個字重音位置不同
+const { PAIRS } = require('../js/pairs.js');
+const groups = Accent.parseGroups(PAIRS);
+for (const g of groups) {
+  const label = g.map((e) => e.raw).join(' / ');
+  const errs = [];
+  for (const e of g) errs.push(...Accent.validate(e).map((m) => `${e.raw}: ${m}`));
+  if (g.length < 2) errs.push('一組至少要兩個字');
+  if (new Set(g.map((e) => e.plain)).size !== 1) errs.push('去掉重音後拼法不同');
+  if (new Set(g.map((e) => e.word)).size !== g.length) errs.push('有重複的字');
+  if (errs.length) {
+    errors++;
+    console.log(`✗ [比較] ${label}: ${errs.join('；')}`);
+  }
+}
+console.log(`比較字組   ${groups.length} 組`);
+
 console.log(`\n共 ${total} 字，${errors} 個錯誤`);
 process.exit(errors ? 1 : 0);

@@ -102,25 +102,38 @@
   };
 
   // ---------- 語音 ----------
+  // macOS 的趣味語音（Eddy、Grandma、Rocko…）品質差，排到最後
+  const NOVELTY_VOICE = /^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/;
+  const GOOD_VOICE = /M[óo]nica|Paulina|Jorge|Marisol|Juan|Diego|Elvira|[ÁA]lvaro|Dalia|Helena|Laura|Pablo|Sabina|Google/i;
+
+  function isNovelty(v) {
+    return NOVELTY_VOICE.test(v.name);
+  }
+
+  function voiceScore(v) {
+    let s = 0;
+    if (isNovelty(v)) s -= 100;
+    if (/premium|enhanced|mejorada|natural|neural/i.test(v.name)) s += 30;
+    if (GOOD_VOICE.test(v.name)) s += 20;
+    if (/es[-_]ES/i.test(v.lang)) s += 5;
+    else if (/es[-_](MX|US)/i.test(v.lang)) s += 3;
+    return s;
+  }
+
   const Speech = {
     supported: 'speechSynthesis' in window,
     voices: [],
     voice: null,
-    rate: store.get('acento.rate', 0.85),
+    rate: store.get('acento.rate', 1),
     init(onChange) {
       if (!this.supported) return onChange();
       const load = () => {
         const all = speechSynthesis.getVoices();
         this.voices = all
           .filter((v) => /^es([-_]|$)/i.test(v.lang))
-          .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+          .sort((a, b) => voiceScore(b) - voiceScore(a) || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
         const saved = store.get('acento.voice', null);
-        this.voice =
-          this.voices.find((v) => v.voiceURI === saved) ||
-          this.voices.find((v) => /es[-_]ES/i.test(v.lang) && v.localService) ||
-          this.voices.find((v) => /es[-_]ES/i.test(v.lang)) ||
-          this.voices[0] ||
-          null;
+        this.voice = this.voices.find((v) => v.voiceURI === saved) || this.voices[0] || null;
         onChange();
       };
       load();
@@ -140,7 +153,7 @@
       const u = new SpeechSynthesisUtterance(text);
       u.lang = this.voice ? this.voice.lang : 'es-ES';
       if (this.voice) u.voice = this.voice;
-      u.rate = slow ? Math.max(0.4, this.rate * 0.6) : this.rate;
+      u.rate = slow ? Math.max(0.5, this.rate * 0.7) : this.rate;
       speechSynthesis.speak(u);
     },
   };
@@ -159,12 +172,22 @@
     sel.addEventListener('change', () => Speech.setVoice(sel.value));
     Speech.init(() => {
       sel.innerHTML = '';
-      for (const v of Speech.voices) {
-        const o = document.createElement('option');
-        o.value = v.voiceURI;
-        o.textContent = `${v.name}（${v.lang}）`;
-        o.selected = v === Speech.voice;
-        sel.appendChild(o);
+      const groups = [
+        ['推薦', Speech.voices.filter((v) => !isNovelty(v))],
+        ['趣味語音（不建議）', Speech.voices.filter(isNovelty)],
+      ];
+      for (const [label, voices] of groups) {
+        if (!voices.length) continue;
+        const g = document.createElement('optgroup');
+        g.label = label;
+        for (const v of voices) {
+          const o = document.createElement('option');
+          o.value = v.voiceURI;
+          o.textContent = `${v.name}（${v.lang}）`;
+          o.selected = v === Speech.voice;
+          g.appendChild(o);
+        }
+        sel.appendChild(g);
       }
       sel.disabled = !Speech.voices.length;
       if (!Speech.supported) {

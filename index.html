@@ -3,9 +3,141 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Spanish Practice</title>
+  <title>Acento 重音練習</title>
+  <meta name="description" content="聽西班牙語單字，判斷重音符號要標在哪個字母。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <h1>¡Hola! 西語練習</h1>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#practice">Acent<span class="brand-o">ó</span> <small>西語重音練習</small></a>
+      <nav class="tabs" aria-label="主選單">
+        <a href="#practice" data-view="practice">練習</a>
+        <a href="#test" data-view="test">測驗</a>
+        <a href="#stats" data-view="stats">統計</a>
+        <a href="#rules" data-view="rules">規則</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="voicebar" id="voicebar">
+      <label>語音 <select id="voice-select"></select></label>
+      <label>速度 <input id="rate" type="range" min="0.5" max="1.2" step="0.05"> <span id="rate-val"></span></label>
+      <p class="voice-warn" id="voice-warn" hidden></p>
+    </div>
+
+    <section class="view" id="view-practice" hidden>
+      <div class="chips" id="practice-chips" role="group" aria-label="練習類別"></div>
+      <p class="mix-note" id="practice-mix" hidden></p>
+      <div id="practice-quiz"></div>
+      <p class="session-line" id="practice-session"></p>
+    </section>
+
+    <section class="view" id="view-test" hidden>
+      <div id="test-setup" class="panel">
+        <h2>測驗</h2>
+        <p class="muted">測驗只用練習中不會出現的字，每題作答後一樣會顯示答案與規則。</p>
+        <div class="chips" id="test-chips" role="group" aria-label="測驗類別"></div>
+        <div class="setup-row">
+          <label>題數
+            <select id="test-count">
+              <option value="10">10 題</option>
+              <option value="20" selected>20 題</option>
+              <option value="30">30 題</option>
+              <option value="all">全部</option>
+            </select>
+          </label>
+          <span class="muted" id="test-available"></span>
+        </div>
+        <button class="btn primary" id="test-start">開始測驗</button>
+      </div>
+      <div id="test-run" hidden>
+        <div id="test-quiz"></div>
+      </div>
+      <div id="test-summary" class="panel" hidden></div>
+    </section>
+
+    <section class="view" id="view-stats" hidden>
+      <div class="panel">
+        <h2>練習答對率</h2>
+        <div id="stats-practice"></div>
+      </div>
+      <div class="panel">
+        <h2>測驗答對率</h2>
+        <div id="stats-test"></div>
+        <h3>最近測驗</h3>
+        <div id="stats-history"></div>
+      </div>
+      <button class="btn ghost" id="stats-reset">清除所有紀錄</button>
+      <p class="muted small">紀錄只存在這個瀏覽器裡。</p>
+    </section>
+
+    <section class="view rules" id="view-rules" hidden>
+      <div class="panel">
+        <h2>一般規則</h2>
+        <p>先找出重音落在哪個音節，再看字尾：</p>
+        <div class="table-scroll">
+        <table class="rule-table general">
+          <thead><tr><th>類型</th><th>重音位置</th><th>什麼時候標</th><th>例子</th></tr></thead>
+          <tbody>
+            <tr><td><b>aguda</b></td><td>最後一音節</td><td>結尾是<b>母音、n、s</b> 才標</td><td>can<b>ción</b>, ca<b>fé</b> ／ ha<b>blar</b>, re<b>loj</b></td></tr>
+            <tr><td><b>llana</b></td><td>倒數第二音節</td><td>結尾<b>不是</b>母音、n、s 才標</td><td><b>ár</b>bol, <b>lá</b>piz ／ <b>ca</b>sa, e<b>xa</b>men</td></tr>
+            <tr><td><b>esdrújula</b></td><td>倒數第三音節</td><td>一律標</td><td><b>mú</b>sica, te<b>lé</b>fono</td></tr>
+            <tr><td><b>sobresdrújula</b></td><td>倒數第四音節</td><td>一律標</td><td><b>dí</b>gamelo</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <ul class="bullets">
+          <li>字尾的 <b>y</b> 算子音：es<b>toy</b>, vi<b>rrey</b> 不標。</li>
+          <li>單音節字原則上不標：fue, dio, vio, fui, guion（區別重音例外，見下表）。</li>
+          <li>複數可能讓重音類型改變：examen → exámenes（llana 變 esdrújula，要標）、canción → canciones（aguda 變 llana，不標）。</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h2>母音相連</h2>
+        <ul class="bullets">
+          <li><b>強母音</b>：a, e, o；<b>弱母音</b>：i, u。</li>
+          <li><b>雙母音（diptongo）</b>：弱＋強、強＋弱、弱＋弱在同一音節，照一般規則：<b>pia</b>no, fa<b>mi</b>lia, ciu<b>dad</b>, a<b>diós</b>。</li>
+          <li><b>強＋強</b>：自然分成兩音節，照一般規則：te<b>a</b>tro, le<b>ón</b>, a<b>é</b>reo。</li>
+          <li><b>重音落在弱母音、旁邊是強母音（hiato）</b>：一律標在 i / u 上，不看一般規則：<b>dí</b>a, pa<b>ís</b>, ba<b>úl</b>, <b>rí</b>o, re<b>ír</b>。中間有 h 也一樣：pro<b>hí</b>be, <b>bú</b>ho。</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h2>區別重音（tilde diacrítica）</h2>
+        <p class="muted">拼法相同、意思不同的單音節字，用重音符號區分。這些字練習時聽不出差別，所以不出聽音題。</p>
+        <div class="table-scroll">
+          <table class="rule-table diacritic">
+            <thead><tr><th>有重音</th><th>例句</th><th>沒重音</th><th>例句</th></tr></thead>
+            <tbody>
+              <tr><td><b>tú</b> 你</td><td><i>Tú</i> eres mi amigo.</td><td><b>tu</b> 你的</td><td>¿Es <i>tu</i> libro?</td></tr>
+              <tr><td><b>él</b> 他</td><td><i>Él</i> vive aquí.</td><td><b>el</b> 定冠詞</td><td><i>El</i> perro duerme.</td></tr>
+              <tr><td><b>sí</b> 是；自己</td><td><i>Sí</i>, quiero café.</td><td><b>si</b> 如果</td><td><i>Si</i> llueve, no salgo.</td></tr>
+              <tr><td><b>qué</b> 什麼（疑問、感嘆）</td><td>¿<i>Qué</i> quieres?</td><td><b>que</b> 連接詞、關係詞</td><td>Creo <i>que</i> sí.</td></tr>
+              <tr><td><b>más</b> 更多</td><td>Quiero <i>más</i> agua.</td><td><b>mas</b> 但是（書面）</td><td>Lo intenté, <i>mas</i> no pude.</td></tr>
+              <tr><td><b>sé</b> 我知道；要（ser 命令）</td><td>No <i>sé</i> nada.</td><td><b>se</b> 代名詞</td><td><i>Se</i> llama Ana.</td></tr>
+              <tr><td><b>dé</b> 給（dar 虛擬式）</td><td>Quiero que me <i>dé</i> la llave.</td><td><b>de</b> 介系詞</td><td>Soy <i>de</i> Taiwán.</td></tr>
+              <tr><td><b>té</b> 茶</td><td>Tomo <i>té</i> verde.</td><td><b>te</b> 代名詞</td><td><i>Te</i> quiero.</td></tr>
+              <tr><td><b>mí</b> 我（介系詞後）</td><td>Es para <i>mí</i>.</td><td><b>mi</b> 我的</td><td><i>Mi</i> casa es pequeña.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted small">疑問詞同理：cómo / como、dónde / donde、cuándo / cuando、quién / quien、cuál / cual、cuánto / cuanto。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap site-footer">
+    <p>快捷鍵：<kbd>空白</kbd> 重播 · <kbd>1</kbd>–<kbd>9</kbd> 依序選母音 · <kbd>0</kbd> 不用標 · <kbd>Enter</kbd> 下一題</p>
+  </footer>
+
+  <script src="js/accent.js"></script>
+  <script src="js/words.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

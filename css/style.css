@@ -15,6 +15,7 @@
   --radius: 14px;
   --font: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --display: "Fraunces", Georgia, serif;
+  --word: "Atkinson Hyperlegible", system-ui, sans-serif;
   color-scheme: light;
 }
 
@@ -217,9 +218,9 @@ select {
   justify-content: center;
   flex-wrap: wrap;
   gap: 4px;
-  font-family: var(--display);
+  font-family: var(--word);
   font-size: clamp(2rem, 9vw, 3.2rem);
-  font-weight: 500;
+  font-weight: 400;
   margin-bottom: 16px;
 }
 .letter {
@@ -263,7 +264,7 @@ button.letter:disabled { cursor: default; }
 .verdict.ok { color: var(--ok); }
 .verdict.bad { color: var(--bad); }
 .answer-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 10px; }
-.answer-word { font-family: var(--display); font-size: 1.8rem; }
+.answer-word { font-family: var(--word); font-size: 1.8rem; }
 .syllables { color: var(--muted); font-size: 1.05rem; }
 .syllables b { color: var(--accent); }
 .yours { font-size: 0.9rem; color: var(--muted); }
@@ -302,7 +303,7 @@ button.letter:disabled { cursor: default; }
 .sound-item::before { content: "▶"; font-size: 0.7rem; color: var(--muted); }
 .sound-item.mark { border-color: var(--ok); }
 .sound-item.playing { background: var(--accent-soft); border-color: var(--accent); }
-.sound-word { font-family: var(--display); font-size: 1.3rem; }
+.sound-word { font-family: var(--word); font-size: 1.3rem; }
 .sound-sub { font-size: 0.85rem; color: var(--muted); }
 .sound-item.mark .sound-sub { color: var(--ok); }
 .compact .sound-items { flex-direction: row; flex-wrap: wrap; }
@@ -322,7 +323,7 @@ button.letter:disabled { cursor: default; }
 .section-title { margin: 24px 0 12px; }
 .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 16px; }
 .group-card .sound-list { margin-top: 0; }
-.group-card .sound-title { font-family: var(--display); font-size: 1.2rem; }
+.group-card .sound-title { font-family: var(--word); font-size: 1.2rem; }
 
 /* Stats */
 .stat-table, .rule-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
@@ -336,7 +337,7 @@ button.letter:disabled { cursor: default; }
 .stat-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; min-width: 60px; margin-top: 7px; }
 .bar > span { display: block; height: 100%; background: var(--accent); }
-.score-big { font-family: var(--display); font-size: 2.6rem; margin: 0; }
+.score-big { font-family: var(--word); font-size: 2.6rem; margin: 0; }
 .wrong-list { padding-left: 1.2em; }
 .wrong-list li { margin: 4px 0; }
 
